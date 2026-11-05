@@ -18,6 +18,48 @@ def products() -> list[Product]:
     ]
 
 
+@pytest.fixture
+def category(products: list[Product]) -> Category:
+    return Category("Смартфоны", "Описание категории", products)
+
+
+# --- Строковые представления и сложение ---
+
+
+def test_product_str(products: list[Product]) -> None:
+    assert str(products[0]) == "Samsung Galaxy S23 Ultra, 180000.0 руб. Остаток: 5 шт."
+
+
+def test_product_str_fractional_price() -> None:
+    product = Product("Тест", "", 99.5, 3)
+    assert str(product) == "Тест, 99.5 руб. Остаток: 3 шт."
+
+
+def test_category_str(category: Category) -> None:
+    # 5 + 8 + 14 = 27
+    assert str(category) == "Смартфоны, количество продуктов: 27 шт."
+
+
+def test_product_add() -> None:
+    a = Product("a", "", 100, 10)
+    b = Product("b", "", 200, 2)
+    assert a + b == 1400
+
+
+def test_product_add_with_real_products(products: list[Product]) -> None:
+    assert products[0] + products[1] == 180000.0 * 5 + 210000.0 * 8
+    assert products[0] + products[2] == 180000.0 * 5 + 31000.0 * 14
+
+
+def test_product_add_wrong_type() -> None:
+    product = Product("a", "", 100, 10)
+    with pytest.raises(TypeError):
+        product + 5  # type: ignore[operator]
+
+
+# --- Инициализация и счётчики ---
+
+
 def test_product_init(products: list[Product]) -> None:
     p = products[0]
     assert (p.name, p.description, p.price, p.quantity) == (
@@ -65,6 +107,11 @@ def test_products_list_is_private(products: list[Product]) -> None:
 def test_products_getter_format() -> None:
     c = Category("Смартфоны", "Описание", [Product("Iphone 15", "512GB", 80.0, 15)])
     assert c.products == "Iphone 15, 80.0 руб. Остаток: 15 шт.\n"
+
+
+def test_products_getter_matches_str(category: Category, products: list[Product]) -> None:
+    expected = "".join(f"{p}\n" for p in products)
+    assert category.products == expected
 
 
 def test_products_getter_empty_category() -> None:
