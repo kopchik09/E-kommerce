@@ -147,7 +147,7 @@ def test_subclass_creation_prints_its_name(capsys):
     assert capsys.readouterr().out.startswith("Smartphone('A', 'd', 1.0, 1)")
 
 
-# ---------- Дополнительное задание: Order и BaseEntity ----------
+# --------- Дополнительное задание: Order и BaseEntity ---------
 
 
 def test_order_total_cost(phone1):
