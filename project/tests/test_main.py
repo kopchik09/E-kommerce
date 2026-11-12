@@ -1,6 +1,13 @@
 import pytest
 from project.src.main import (
-    BaseEntity, BaseProduct, Category, InitLoggerMixin, LawnGrass, Order, Product, Smartphone,
+    BaseEntity,
+    BaseProduct,
+    Category,
+    InitLoggerMixin,
+    LawnGrass,
+    Order,
+    Product,
+    Smartphone,
 )
 
 
@@ -14,7 +21,16 @@ def reset_counters():
 
 @pytest.fixture
 def phone1():
-    return Smartphone("Samsung Galaxy S23 Ultra", "256GB", 180000.0, 5, 95.5, "S23 Ultra", 256, "Серый")
+    return Smartphone(
+        "Samsung Galaxy S23 Ultra",
+        "256GB",
+        180000.0,
+        5,
+        95.5,
+        "S23 Ultra",
+        256,
+        "Серый",
+    )
 
 
 @pytest.fixture
@@ -24,15 +40,20 @@ def phone2():
 
 @pytest.fixture
 def grass1():
-    return LawnGrass("Газонная трава", "Элитная трава", 500.0, 20, "Россия", "7 дней", "Зеленый")
+    return LawnGrass(
+        "Газонная трава", "Элитная трава", 500.0, 20, "Россия", "7 дней", "Зеленый"
+    )
 
 
 @pytest.fixture
 def grass2():
-    return LawnGrass("Газонная трава 2", "Выносливая", 450.0, 15, "США", "5 дней", "Темно-зеленый")
+    return LawnGrass(
+        "Газонная трава 2", "Выносливая", 450.0, 15, "США", "5 дней", "Темно-зеленый"
+    )
 
 
 # ---------- Старые тесты: Product, сеттер, new_product, Category ----------
+
 
 def test_product_str():
     p = Product("Iphone 15", "512GB", 210000.0, 8)
@@ -79,6 +100,7 @@ def test_category_counters():
 
 # ---------- Задание 1: абстрактные классы ----------
 
+
 def test_base_product_cannot_be_instantiated():
     with pytest.raises(TypeError):
         BaseProduct("X", "d", 1.0, 1)
@@ -104,6 +126,7 @@ def test_products_are_base_products(phone1, grass1):
 
 # ---------- Задание 2: миксин ----------
 
+
 def test_product_uses_mixin():
     assert issubclass(Product, InitLoggerMixin)
 
@@ -126,6 +149,7 @@ def test_subclass_creation_prints_its_name(capsys):
 
 # ---------- Дополнительное задание: Order и BaseEntity ----------
 
+
 def test_order_total_cost(phone1):
     order = Order(phone1, 2)
     assert order.total_cost == 180000.0 * 2
@@ -134,7 +158,7 @@ def test_order_total_cost(phone1):
 
 def test_order_cost_fixed_after_price_change(phone1):
     order = Order(phone1, 2)
-    phone1.price = 190000.0          # повышение: input не вызывается
+    phone1.price = 190000.0  # повышение: input не вызывается
     assert order.total_cost == 180000.0 * 2
 
 
@@ -147,7 +171,7 @@ def test_order_rejects_bad_quantity(phone1):
     with pytest.raises(ValueError):
         Order(phone1, 0)
     with pytest.raises(ValueError):
-        Order(phone1, 100)           # на складе только 5
+        Order(phone1, 100)  # на складе только 5
 
 
 def test_category_and_order_are_base_entities(phone1):

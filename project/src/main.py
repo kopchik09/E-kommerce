@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, List, Optional
 
-
 # ---------- Задание 1: абстрактный базовый класс ----------
+
 
 class BaseProduct(ABC):
     """Абстрактный базовый класс товара.
@@ -54,11 +54,12 @@ class BaseProduct(ABC):
 
 # ---------- Задание 2: миксин, который печатает информацию о создании ----------
 
+
 class InitLoggerMixin:
     """Миксин: при создании объекта печатает его класс и параметры."""
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)   # сначала создаём объект как обычно
+        super().__init__(*args, **kwargs)  # сначала создаём объект как обычно
         self._init_args = args
         self._init_kwargs = kwargs
         print(repr(self))
@@ -145,6 +146,7 @@ class LawnGrass(Product):
 
 # ---------- Категории и заказы ----------
 
+
 def _check_product(product: object) -> None:
     """Проверяет, что объект является товаром или его наследником."""
     if not isinstance(product, Product):
@@ -215,7 +217,9 @@ class Order(BaseEntity):
 
     def __init__(self, product: Product, quantity: int):
         if not isinstance(product, Product):
-            raise TypeError("В заказ можно добавить только объект класса Product или его наследника")
+            raise TypeError(
+                "В заказ можно добавить только объект класса Product или его наследника"
+            )
         if not isinstance(quantity, int) or quantity <= 0:
             raise ValueError("Количество должно быть целым положительным числом")
         if quantity > product.quantity:
@@ -223,7 +227,9 @@ class Order(BaseEntity):
 
         self.product = product
         self.quantity = quantity
-        self.__total_cost = product.price * quantity   # цена фиксируется на момент заказа
+        self.__total_cost = (
+            product.price * quantity
+        )  # цена фиксируется на момент заказа
 
     @property
     def total_quantity(self) -> int:
