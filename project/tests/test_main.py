@@ -1,6 +1,7 @@
 import pytest
-
-from project.src.main import Category, LawnGrass, Product, Smartphone
+from project.src.main import (
+    BaseEntity, BaseProduct, Category, InitLoggerMixin, LawnGrass, Order, Product, Smartphone,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -76,70 +77,85 @@ def test_category_counters():
     assert Category.product_count == 1
 
 
-# ---------- Задание 1: наследование и атрибуты ----------
+# ---------- Задание 1: абстрактные классы ----------
 
-def test_smartphone_attributes(phone1):
-    assert phone1.name == "Samsung Galaxy S23 Ultra"
-    assert phone1.price == 180000.0
-    assert phone1.efficiency == 95.5
-    assert phone1.model == "S23 Ultra"
-    assert phone1.memory == 256
-    assert phone1.color == "Серый"
-
-
-def test_lawn_grass_attributes(grass1):
-    assert grass1.country == "Россия"
-    assert grass1.germination_period == "7 дней"
-    assert grass1.color == "Зеленый"
-
-
-def test_inheritance():
-    assert issubclass(Smartphone, Product)
-    assert issubclass(LawnGrass, Product)
-
-
-def test_inherited_price_setter_works(phone1, capsys):
-    phone1.price = -1
-    assert phone1.price == 180000.0
-    assert "не должна" in capsys.readouterr().out
-
-
-# ---------- Задание 2: сложение ----------
-
-def test_add_same_class_smartphones(phone1, phone2):
-    assert phone1 + phone2 == 180000.0 * 5 + 210000.0 * 8
-
-
-def test_add_same_class_grass(grass1, grass2):
-    assert grass1 + grass2 == 500.0 * 20 + 450.0 * 15
-
-
-def test_add_different_classes_raises(phone1, grass1):
+def test_base_product_cannot_be_instantiated():
     with pytest.raises(TypeError):
-        phone1 + grass1
+        BaseProduct("X", "d", 1.0, 1)
 
 
-def test_add_non_product_raises(phone1):
+def test_base_entity_cannot_be_instantiated():
     with pytest.raises(TypeError):
-        phone1 + 5
+        BaseEntity()
 
 
-# ---------- Задание 3: добавление в категорию ----------
+def test_subclass_without_total_value_cannot_be_created():
+    class Broken(BaseProduct):
+        pass
 
-def test_add_product_accepts_subclasses(phone1, grass1):
-    category = Category("Смесь", "описание", [])
-    category.add_product(phone1)
-    category.add_product(grass1)
-    assert Category.product_count == 2
-
-
-def test_add_product_rejects_non_product():
-    category = Category("Пусто", "описание", [])
     with pytest.raises(TypeError):
-        category.add_product("Not a product")
-    assert Category.product_count == 0
+        Broken("X", "d", 1.0, 1)
 
 
-def test_constructor_rejects_non_product():
+def test_products_are_base_products(phone1, grass1):
+    assert isinstance(phone1, BaseProduct)
+    assert isinstance(grass1, BaseProduct)
+
+
+# ---------- Задание 2: миксин ----------
+
+def test_product_uses_mixin():
+    assert issubclass(Product, InitLoggerMixin)
+
+
+def test_creation_prints_class_and_params(capsys):
+    Product("Продукт1", "Описание продукта", 1200, 10)
+    out = capsys.readouterr().out
+    assert out.strip() == "Product('Продукт1', 'Описание продукта', 1200, 10)"
+
+
+def test_repr_matches_constructor_call():
+    p = Product("Продукт1", "Описание продукта", 1200, 10)
+    assert repr(p) == "Product('Продукт1', 'Описание продукта', 1200, 10)"
+
+
+def test_subclass_creation_prints_its_name(capsys):
+    Smartphone("A", "d", 1.0, 1, 90.0, "m", 128, "c")
+    assert capsys.readouterr().out.startswith("Smartphone('A', 'd', 1.0, 1)")
+
+
+# ---------- Дополнительное задание: Order и BaseEntity ----------
+
+def test_order_total_cost(phone1):
+    order = Order(phone1, 2)
+    assert order.total_cost == 180000.0 * 2
+    assert order.total_quantity == 2
+
+
+def test_order_cost_fixed_after_price_change(phone1):
+    order = Order(phone1, 2)
+    phone1.price = 190000.0          # повышение: input не вызывается
+    assert order.total_cost == 180000.0 * 2
+
+
+def test_order_rejects_non_product():
     with pytest.raises(TypeError):
-        Category("Ошибка", "описание", ["не товар"])
+        Order("не товар", 1)
+
+
+def test_order_rejects_bad_quantity(phone1):
+    with pytest.raises(ValueError):
+        Order(phone1, 0)
+    with pytest.raises(ValueError):
+        Order(phone1, 100)           # на складе только 5
+
+
+def test_category_and_order_are_base_entities(phone1):
+    assert isinstance(Category("A", "d", []), BaseEntity)
+    assert isinstance(Order(phone1, 1), BaseEntity)
+
+
+def test_category_totals(phone1, phone2):
+    category = Category("Смартфоны", "d", [phone1, phone2])
+    assert category.total_quantity == 5 + 8
+    assert category.total_cost == 180000.0 * 5 + 210000.0 * 8
