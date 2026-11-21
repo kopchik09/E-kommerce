@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar, List, Optional
 
 
-# ---------- Задание 1: абстрактный базовый класс ----------
+class ZeroQuantityError(ValueError):
+    """Товар с нулевым количеством нельзя добавить в категорию или заказ."""
 
 class BaseProduct(ABC):
     """Абстрактный базовый класс товара.
@@ -52,7 +53,6 @@ class BaseProduct(ABC):
         return self.total_value + other.total_value
 
 
-# ---------- Задание 2: миксин, который печатает информацию о создании ----------
 
 class InitLoggerMixin:
     """Миксин: при создании объекта печатает его класс и параметры."""
@@ -143,7 +143,6 @@ class LawnGrass(Product):
         self.color = color
 
 
-# ---------- Категории и заказы ----------
 
 def _check_product(product: object) -> None:
     """Проверяет, что объект является товаром или его наследником."""
@@ -167,6 +166,16 @@ class BaseEntity(ABC):
         """Итоговая стоимость."""
 
 
+class BaseProduct(ABC):
+    def __init__(self, name: str, description: str, price: float, quantity: int):
+        if quantity == 0:
+            raise ZeroQuantityError("Товар с нулевым количеством не может быть добавлен")
+        self.name = name
+        self.description = description
+        self.__price = price
+        self.quantity = quantity
+
+
 class Category(BaseEntity):
     """Категория товаров."""
 
@@ -186,12 +195,20 @@ class Category(BaseEntity):
         self.__products = list(products)
         Category.category_count += 1
         Category.product_count += len(products)
+        Category.product_count += len(products)
 
     def add_product(self, product: Product) -> None:
         """Добавляет товар в категорию."""
         _check_product(product)
         self.__products.append(product)
         Category.product_count += 1
+
+    def middle_price(self) -> float:
+        """Средняя цена товаров категории. Если товаров нет, возвращает 0."""
+        try:
+            return sum(p.price for p in self.__products) / len(self.__products)
+        except ZeroDivisionError:
+            return 0
 
     @property
     def products(self) -> str:

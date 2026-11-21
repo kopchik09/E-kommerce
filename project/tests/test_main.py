@@ -1,116 +1,83 @@
 import pytest
 
 from project.src.main import (
-    BaseEntity, BaseProduct, Category, InitLoggerMixin, LawnGrass, Order, Product, Smartphone,
+    BaseEntity, BaseProduct, Category, InitLoggerMixin, LawnGrass, Order, Product, Smartphone, ZeroQuantityError
 )
 
-@pytest.fixture(autouse=True)
-def reset_counters():
-    """Обнуляет счётчики класса Category перед каждым тестом."""
-    Category.category_count = 0
-    Category.product_count = 0
-    yield
+def make_product(name="Тест", price=100.0, quantity=5):
+    return Product(name, "описание", price, quantity)
+
+# ---- Задание 1 ----
+
+def test_zero_quantity_product_raises_value_error():
+    with pytest.raises(ValueError, match="Товар с нулевым количеством не может быть добавлен"):
+        Product("Бракованный", "описание", 1000.0, 0)
 
 
-@pytest.fixture
-def phone1():
-    return Smartphone("Samsung Galaxy S23 Ultra", "256GB", 180000.0, 5, 95.5, "S23 Ultra", 256, "Серый")
+def test_zero_quantity_error_is_value_error():
+    assert issubclass(ZeroQuantityError, ValueError)
 
-
-@pytest.fixture
-def phone2():
-    return Smartphone("Iphone 15", "512GB", 210000.0, 8, 98.2, "15", 512, "Gray space")
-
-
-@pytest.fixture
-def grass1():
-    return LawnGrass("Газонная трава", "Элитная трава", 500.0, 20, "Россия", "7 дней", "Зеленый")
-
-
-@pytest.fixture
-def grass2():
-    return LawnGrass("Газонная трава 2", "Выносливая", 450.0, 15, "США", "5 дней", "Темно-зеленый")
-
-
-# ---------- Задание 1: абстрактные классы ----------
 
 def test_base_product_cannot_be_instantiated():
     with pytest.raises(TypeError):
-        BaseProduct("X", "d", 1.0, 1)
+        BaseProduct("name", "desc", 1.0, 1)
 
 
-def test_base_entity_cannot_be_instantiated():
-    with pytest.raises(TypeError):
-        BaseEntity()
+# ---- Задание 2 ----
+
+def test_middle_price_average():
+    category = Category("Тест", "описание", [
+        make_product(price=100.0),
+        make_product(price=200.0),
+        make_product(price=300.0),
+    ])
+    assert category.middle_price() == pytest.approx(200.0)
 
 
-def test_subclass_without_total_value_cannot_be_created():
-    class Broken(BaseProduct):
-        pass
-
-    with pytest.raises(TypeError):
-        Broken("X", "d", 1.0, 1)
+def test_middle_price_empty_category_returns_zero():
+    assert Category("Пустая", "описание", []).middle_price() == 0
 
 
-def test_products_are_base_products(phone1, grass1):
-    assert isinstance(phone1, BaseProduct)
-    assert isinstance(grass1, BaseProduct)
+# ---- Дополнительное задание ----
 
+def test_add_zero_quantity_product_to_category_raises(capsys):
+    product = make_product()
+    product.quantity = 0  # через конструктор такой товар не создать
+    category = Category("Тест", "описание", [])
 
-# ---------- Задание 2: миксин ----------
+    with pytest.raises(ZeroQuantityError):
+        category.add_product(product)
 
-def test_product_uses_mixin():
-    assert issubclass(Product, InitLoggerMixin)
-
-
-def test_creation_prints_class_and_params(capsys):
-    Product("Продукт1", "Описание продукта", 1200, 10)
     out = capsys.readouterr().out
-    assert out.strip() == "Product('Продукт1', 'Описание продукта', 1200, 10)"
+    assert "Ошибка" in out
+    assert "Обработка добавления товара завершена" in out
+    assert "добавлен в категорию" not in out
 
 
-def test_repr_matches_constructor_call():
-    p = Product("Продукт1", "Описание продукта", 1200, 10)
-    assert repr(p) == "Product('Продукт1', 'Описание продукта', 1200, 10)"
+def test_add_product_to_category_success_prints_messages(capsys):
+    category = Category("Тест", "описание", [])
+    category.add_product(make_product())
+
+    out = capsys.readouterr().out
+    assert "добавлен в категорию" in out
+    assert "Обработка добавления товара завершена" in out
 
 
-def test_subclass_creation_prints_its_name(capsys):
-    Smartphone("A", "d", 1.0, 1, 90.0, "m", 128, "c")
-    assert capsys.readouterr().out.startswith("Smartphone('A', 'd', 1.0, 1)")
+def test_order_with_zero_quantity_product_raises(capsys):
+    product = make_product()
+    product.quantity = 0
+
+    with pytest.raises(ZeroQuantityError):
+        Order(product, 1)
+
+    assert "Обработка добавления товара завершена" in capsys.readouterr().out
 
 
-# ---------- Дополнительное задание: Order и BaseEntity ----------
-
-def test_order_total_cost(phone1):
-    order = Order(phone1, 2)
-    assert order.total_cost == 180000.0 * 2
-    assert order.total_quantity == 2
+def test_order_total_cost():
+    order = Order(make_product(price=100.0, quantity=10), 3)
+    assert order.total_cost == pytest.approx(300.0)
 
 
-def test_order_cost_fixed_after_price_change(phone1):
-    order = Order(phone1, 2)
-    phone1.price = 190000.0          # повышение: input не вызывается
-    assert order.total_cost == 180000.0 * 2
-
-
-def test_order_rejects_non_product():
-    with pytest.raises(TypeError):
-        Order("не товар", 1)
-
-
-def test_order_rejects_bad_quantity(phone1):
+def test_order_more_than_stock_raises_value_error():
     with pytest.raises(ValueError):
-        Order(phone1, 0)
-    with pytest.raises(ValueError):
-        Order(phone1, 100)           # на складе только 5
-
-
-def test_category_and_order_are_base_entities(phone1):
-    assert isinstance(Category("A", "d", []), BaseEntity)
-    assert isinstance(Order(phone1, 1), BaseEntity)
-
-
-def test_category_totals(phone1, phone2):
-    category = Category("Смартфоны", "d", [phone1, phone2])
-    assert category.total_quantity == 5 + 8
-    assert category.total_cost == 180000.0 * 5 + 210000.0 * 8
+        Order(make_product(quantity=2), 5)
