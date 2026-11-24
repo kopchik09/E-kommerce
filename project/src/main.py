@@ -5,6 +5,7 @@ from typing import Any, ClassVar, List, Optional
 class ZeroQuantityError(ValueError):
     """Товар с нулевым количеством нельзя добавить в категорию или заказ."""
 
+
 class BaseProduct(ABC):
     """Абстрактный базовый класс товара.
 
@@ -13,6 +14,8 @@ class BaseProduct(ABC):
     """
 
     def __init__(self, name: str, description: str, price: float, quantity: int):
+        if quantity == 0:
+            raise ZeroQuantityError("Товар с нулевым количеством не может быть добавлен")
         self.name = name
         self.description = description
         self.__price = price
@@ -51,7 +54,6 @@ class BaseProduct(ABC):
         if type(self) is not type(other):
             raise TypeError("Складывать можно только товары одного класса")
         return self.total_value + other.total_value
-
 
 
 class InitLoggerMixin:
@@ -143,7 +145,6 @@ class LawnGrass(Product):
         self.color = color
 
 
-
 def _check_product(product: object) -> None:
     """Проверяет, что объект является товаром или его наследником."""
     if not isinstance(product, Product):
@@ -166,16 +167,6 @@ class BaseEntity(ABC):
         """Итоговая стоимость."""
 
 
-class BaseProduct(ABC):
-    def __init__(self, name: str, description: str, price: float, quantity: int):
-        if quantity == 0:
-            raise ZeroQuantityError("Товар с нулевым количеством не может быть добавлен")
-        self.name = name
-        self.description = description
-        self.__price = price
-        self.quantity = quantity
-
-
 class Category(BaseEntity):
     """Категория товаров."""
 
@@ -195,13 +186,24 @@ class Category(BaseEntity):
         self.__products = list(products)
         Category.category_count += 1
         Category.product_count += len(products)
-        Category.product_count += len(products)
 
     def add_product(self, product: Product) -> None:
         """Добавляет товар в категорию."""
-        _check_product(product)
-        self.__products.append(product)
-        Category.product_count += 1
+        try:
+            _check_product(product)
+            if product.quantity == 0:
+                raise ZeroQuantityError(
+                    f"Товар «{product.name}» с нулевым количеством не может быть добавлен"
+                )
+            self.__products.append(product)
+            Category.product_count += 1
+        except ZeroQuantityError as e:
+            print(f"Ошибка: {e}")
+            raise
+        else:
+            print(f"Товар «{product.name}» добавлен в категорию")
+        finally:
+            print("Обработка добавления товара завершена")
 
     def middle_price(self) -> float:
         """Средняя цена товаров категории. Если товаров нет, возвращает 0."""
@@ -231,16 +233,28 @@ class Order(BaseEntity):
     """Заказ: ссылка на один товар, количество и итоговая стоимость."""
 
     def __init__(self, product: Product, quantity: int):
-        if not isinstance(product, Product):
-            raise TypeError("В заказ можно добавить только объект класса Product или его наследника")
-        if not isinstance(quantity, int) or quantity <= 0:
-            raise ValueError("Количество должно быть целым положительным числом")
-        if quantity > product.quantity:
-            raise ValueError(f"На складе только {product.quantity} шт. товара")
+        try:
+            if not isinstance(product, Product):
+                raise TypeError("В заказ можно добавить только объект класса Product или его наследника")
+            if product.quantity == 0:
+                raise ZeroQuantityError(
+                    f"Товар «{product.name}» с нулевым количеством не может быть добавлен"
+                )
+            if not isinstance(quantity, int) or quantity <= 0:
+                raise ValueError("Количество должно быть целым положительным числом")
+            if quantity > product.quantity:
+                raise ValueError(f"На складе только {product.quantity} шт. товара")
+        except ZeroQuantityError as e:
+            print(f"Ошибка: {e}")
+            raise
+        else:
+            print(f"Товар «{product.name}» добавлен в заказ")
+        finally:
+            print("Обработка добавления товара завершена")
 
         self.product = product
         self.quantity = quantity
-        self.__total_cost = product.price * quantity   # цена фиксируется на момент заказа
+        self.__total_cost = product.price * quantity
 
     @property
     def total_quantity(self) -> int:
@@ -252,6 +266,7 @@ class Order(BaseEntity):
 
     def __str__(self):
         return f"Заказ: {self.product.name}, {self.quantity} шт., итого {self.total_cost} руб."
+
 
 if __name__ == '__main__':
     try:

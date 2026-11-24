@@ -1,11 +1,11 @@
 import pytest
 
-from project.src.main import (
-    BaseEntity, BaseProduct, Category, InitLoggerMixin, LawnGrass, Order, Product, Smartphone, ZeroQuantityError
-)
+from project.src.main import BaseProduct, Category, Order, Product, ZeroQuantityError
+
 
 def make_product(name="Тест", price=100.0, quantity=5):
     return Product(name, "описание", price, quantity)
+
 
 # ---- Задание 1 ----
 
@@ -70,7 +70,18 @@ def test_order_with_zero_quantity_product_raises(capsys):
     with pytest.raises(ZeroQuantityError):
         Order(product, 1)
 
-    assert "Обработка добавления товара завершена" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "Ошибка" in out
+    assert "Обработка добавления товара завершена" in out
+    assert "добавлен в заказ" not in out
+
+
+def test_order_success_prints_messages(capsys):
+    Order(make_product(), 2)
+
+    out = capsys.readouterr().out
+    assert "добавлен в заказ" in out
+    assert "Обработка добавления товара завершена" in out
 
 
 def test_order_total_cost():
